@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="/plugins/ecogis/pseudodist" >
+     <file>icon.png</file>
+  </qresource>
+</RCC>
