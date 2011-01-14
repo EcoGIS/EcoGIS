@@ -3,9 +3,10 @@
 RasterAutoCorrelation
 A QGIS plugin
 Calculate Moran's I and Geary's C on a raster file following the procedure
-described in de Smith, Goodchild, Longley Geospatial Analysis - 
+described at by de Smith, Goodchild, Longley Geospatial Analysis - 
 a comprehensive guide. 3rd edition (c) 2006-2011 
 (http://www.spatialanalysisonline.com/ga_book.html)
+with additional details from (http://www.lpc.uottawa.ca/publications/moransi/moran.htm).
 These formulas examine the 4 immediately adjacent pixels of each cell to 
 assess global spatial autocorrelation of the layer.
                              -------------------
@@ -31,12 +32,16 @@ from Ui_RasterAutoCorrelation import Ui_RasterAutoCorrelation
 from numpy.random import rand
 from math import sqrt, pow, log, exp
 from ecogis.UI_Tools import *
+from scipy.stats import zprob
 
 class RasterAutoCorrelation(QDialog, Ui_RasterAutoCorrelation):
 
   # initiate some global variables
-  #debug=open("RasterAutoCorrelation.log", "w")
   debug=None
+
+  # define the size of the neighbourhood to examine
+  # only useful if more features are added later
+  Radius=1
 
   ################################################################
   def __init__(self, iface):
@@ -53,14 +58,19 @@ class RasterAutoCorrelation(QDialog, Ui_RasterAutoCorrelation):
 
     # set up table
     self.outTable.clear()
-    self.outTable.setColumnCount(4)
-    self.outTable.setRowCount(1)
+    self.outTable.setColumnCount(1)
+    self.outTable.setRowCount(16)
 
     # fill in header for the table
-    for i, label in enumerate(["Layer", "Mean", "Moran's I", "Geary's C"]):
+    for i, label in enumerate(["Layer", "Mean", "Moran's I", 
+                               "Variance (N)", "Z-score (N)", "p (N)", 
+                               "Variance (R)", "Z-score (R)", "p (R)", 
+                               "Geary's C",
+                               "Variance (N)", "Z-score (N)", "p (N)", 
+                               "Variance (R)", "Z-score (R)", "p (R)"]):
       headerItem = QTableWidgetItem()
       headerItem.setText(QApplication.translate("Form", label, None, QApplication.UnicodeUTF8))
-      self.outTable.setHorizontalHeaderItem(i,headerItem)
+      self.outTable.setVerticalHeaderItem(i,headerItem)
       # create an empty row for the results
       self.outTable.setItem(0,i,QTableWidgetItem())
 
@@ -100,11 +110,6 @@ class RasterAutoCorrelation(QDialog, Ui_RasterAutoCorrelation):
       xSize=(xMax-xMin)/float(xDim)
       ySize=(yMax-yMin)/float(yDim)
 
-      if self.debug:
-        self.debug.write("xMin=%s, xMax=%s, yMin=%s, yMax=%s, xDim=%s, yDim=%s, xSize=%s, ySize=%s\n" %(xMin, xMax, yMin, yMax, xDim, yDim, xSize, ySize))
-        self.debug.flush()
-
-
       # do a quick calculation of the mean
       # loop through the pixels and sum values
       for i in range(xDim):
@@ -125,19 +130,15 @@ class RasterAutoCorrelation(QDialog, Ui_RasterAutoCorrelation):
       else:
         myMean=None
 
-    if self.debug:
-      self.debug.write("mean=%s, total=%s, n=%s\n" %(myMean, myRunningTotal, myRunningCount))
-      self.debug.flush()
-
     return myMean
 
   ################################################################
   def getMoranGeary(self, myLayer, myBand, m):
 
     # formula for Moran's I
-    # [ sum i=<1..n> sum j= <1..n> w(i,j) (x(i) - x(m)) (x(j) - x(m)) / 
-    #   sum i=<1..n> (x(i) - x(m))^2 ] * 
-    # # n / sum i=<1..n> sum j= <1..n> w(i,j)
+    # I = [ sum i=<1..n> sum j= <1..n> w(i,j) (x(i) - x(m)) (x(j) - x(m)) / 
+    #          sum i=<1..n> (x(i) - x(m))^2 ] * 
+    # #    [ n / sum i=<1..n> sum j= <1..n> w(i,j) ]
     # where n = number of pixels, 
     #       w(i,j) = weight (1 if j is next to i, 0 otherwise)
     #       x(i) = value at position i
@@ -148,6 +149,42 @@ class RasterAutoCorrelation(QDialog, Ui_RasterAutoCorrelation):
     #   sum i=<1..n> (x(i) - x(m))^2 ] * 
     #  (n -1) / 2 * sum i=<1..n> sum j= <1..n> w(i,j)
     # variables as Moran's I
+
+    # Variance Moran's I (assuming normality)
+    # Variance = [ (n^2S1 - nS2 + 3S0^2) / (S0^2(n^2-1)) ] - E^2
+    # Where
+    # S0= sum i=<1..n> sum j=<1..n> (w(ij)), i<>j
+    # S1= 1/2 sum i=<1..n> sum j=<1..n> (w(ij) + w(ji))^2, i<>j
+    # S2= sum i=<1..n> [sum j=<1..n> w(ij) + sum j=<1..n> w(ji)]^2
+    # E=Expected = 1/(N^2-1)
+    # Zscore for Moran's I assuming normality
+    # Zscore =  I-E / Variance^0.5
+
+    # Variance Moran's I (randomisation test version)
+    # Variance = [ [n((n^2-3n+3)S1 - nS2 + 3S0^2) - k((n^2-n)S1-2nS2+6S0^2)] ] /
+    #              [ (n-1)(n-2)(n-3)S0^2 ] ] - E^2
+    # Where S0,1,2,E as above
+    # k = [ (sum i=<1..n> (x(i) - x(m))^4 ) / n ] / 
+    #     [ (sum i=<1..n> (x(i) - x(m))^2 ) / n ]^2
+    # Zscore as above
+
+    # initialise variables
+    myN=0
+    # denominator for Moran & Geary are the same
+    myDenominator=0
+    # Numerator is different
+    myNumeratorMI=float(0)
+    myNumeratorGC=float(0)
+    myNumeratorCount=0
+
+    # initialise variables
+    [myS0,myS1,myS2,myKNum,myKDenom,myK]=[0,0,0,0,0,0]
+    [myMoranI,myVarianceMIAN,myZMIAN,myPMIAN,
+     myVarianceMIRV,myZMIRV,myPMIRV,
+     myGearyC,myVarianceGCAN,myZGCAN,myPGCAN,
+     myVarianceGCRV,myZGCRV,myPGCRV]=[None,None,None,None,None,
+                                      None,None,None,None,None,
+                                      None,None,None,None]
 
     # remember ndv
     myNDV=QString(u'null (no data)')
@@ -162,36 +199,27 @@ class RasterAutoCorrelation(QDialog, Ui_RasterAutoCorrelation):
     xSize=(xMax-xMin)/xDim
     ySize=(yMax-yMin)/yDim
 
-    myN=0
-    # denominator for Moran & Geary are the same
-    myDenominator=0
-    # Numerator is different
-    myNumeratorMI=float(0)
-    myNumeratorGC=float(0)
-    myNumeratorCount=0
-
-    # define the size of the neighbourhood to examine
-    myRadius=1
-
     # loop through all points
     for i in range(xDim):
       x=xMin+(xSize/2)+(i*xSize)
       for j in range(yDim):
         y=yMin+(ySize/2)+(j*ySize)
+        # get value
         zstr=myLayer.identify(QgsPoint(x,y))[1].values()[myBand]
 
+        # do sums if we have a value
         if not zstr==myNDV:
           z=float(zstr)
           myN+=1
-          myDenominator=myDenominator+pow((z-m),2)
-          if self.debug:
-            self.debug.write("x=%s, y=%s, z=%s, pow((z-m),2)=%s, denom=%s\n" %(x,y,z, pow((z-m),2), myDenominator))
-            self.debug.flush()
-        
+          myDenominator+=pow(z-m,2)
+          myKNum+=pow(z-m,4)
+          myKDenom=myDenominator # same calculation at this point
+          myS2_ct=0
+
           # loop through adjacent points
-          for ii in range(-1*myRadius,myRadius+1):
+          for ii in range(-1*self.Radius,self.Radius+1):
             xx=x+(ii*xSize)
-            for jj in range(-1*myRadius,myRadius+1):
+            for jj in range(-1*self.Radius,self.Radius+1):
               yy=y+(jj*ySize)
               zzstr=myLayer.identify(QgsPoint(xx,yy))[1].values()[myBand]
 
@@ -201,13 +229,12 @@ class RasterAutoCorrelation(QDialog, Ui_RasterAutoCorrelation):
                 myNumeratorMI = myNumeratorMI + (z-m)*(zz-m)
                 myNumeratorGC = myNumeratorGC + pow(z-zz,2)
                 myNumeratorCount+=1
-                if self.debug:
-                  self.debug.write("xx=%s, yy=%s, zz=%s, (z-m)*(zz-m)=%s, pow(z-zz,2)=%s, numMI=%s, numGC=%s, numct=%s\n" %(xx,yy,zz, (z-m)*(zz-m), pow(z-zz,2), myNumeratorMI, myNumeratorGC, myNumeratorCount ))
-                  self.debug.flush()
-              else:
-                if self.debug:
-                  self.debug.write("xx=%s, yy=%s,zz=%s\n" %(xx,yy,zzstr))
-                  self.debug.flush()
+                myS0+=1 ## w(ij) = 1
+                myS1+=4 ## (w(ij) + w(ji))^2 = (1+1)^2 = 4
+                myS2_ct+=2 ## w(ij) + w(ji)
+
+          # finish S2 running total by squaring the total adjacents
+          myS2+=pow(myS2_ct,2)
 
     # now put numerator and denominator together 
     if myDenominator==0 or myNumeratorCount==0:
@@ -217,20 +244,63 @@ class RasterAutoCorrelation(QDialog, Ui_RasterAutoCorrelation):
       myMoranI= float(myN)/float(myNumeratorCount)*myNumeratorMI/myDenominator
       myGearyC= float(myN-1)/(2*float(myNumeratorCount))*myNumeratorGC/myDenominator
 
-    if self.debug:
-      self.debug.write("numMI=%s, numGC=%s, denom=%s, numct=%s, N=%s, MoranI=%s, GearyC=%s\n" %(myNumeratorMI, myNumeratorGC, myDenominator, myNumeratorCount, myN, myMoranI, myGearyC))
-      self.debug.flush()
+      # Stats for Moran's I
+      # Expected value of Moran's I
+      myE=-1*pow(myN-1,-1)
 
-    return [myMoranI,myGearyC]
+      # Finish S1 calculation
+      myS1=myS1/2
+
+      # Variance of Moran's I Assuming Normality
+      myVarianceMIAN=(((pow(myN,2)*myS1) - (myN*myS2) + (3*(pow(myS0,2)))) /\
+                       (pow(myS0,2)*(pow(myN,2)-1))) - pow(myE,2)
+
+
+      # Variance Moran's I Randomisation Version
+      if myN>0 and myKDenom>0:
+        myK = (myKNum / myN) / pow(myKDenom / myN,2)
+        myVarianceMIRV = ((myN*((pow(myN,2)-(3*myN)+3)*myS1 - myN*myS2 + 3*pow(myS0,2)) \
+                             - myK*((pow(myN,2)-myN)*myS1-2*myN*myS2+6*pow(myS0,2))) /\
+                            ( (myN-1)*(myN-2)*(myN-3)*pow(myS0,2) )) - pow(myE,2)
+
+      if myVarianceMIAN > 0:
+        # Zscore for Moran's I assuming Normality
+        myZMIAN =  (myMoranI-myE) / pow(myVarianceMIAN,0.5)
+        # P value that Moran's I shows no significant autocorrelation
+        myPMIAN = 2*(1-zprob(myZMIAN))
+
+      if myVarianceMIRV > 0:
+        # Zscore for Moran's I randomisation version
+        myZMIRV =  (myMoranI-myE) / pow(myVarianceMIRV,0.5)
+        # P value that Moran's I shows no significant autocorrelation
+        myPMIRV = 2*(1-zprob(myZMIRV))
+
+      # Variance, z-score & p value for Geary's C
+      # Normality version
+      myVarianceGCAN = ((((2*myS1)+myS2)*(myN-1)-(4*pow(myS0,2))))/(2*(myN+1)*pow(myS0,2))
+      if myVarianceGCAN>0:
+        myZGCAN = -1*(myGearyC - 1) / pow(myVarianceGCAN,0.5)
+        myPGCAN = 2*(1-zprob(myZGCAN))
+
+      # Now the random version
+      myVarianceGCRV = ((((myN-1)*myS1)*((pow(myN,2)-(3*myN)+3-((myN-1)*myK)))) \
+                          - ((((myN-1)*myS2)*((pow(myN,2)+(3*myN)-6-((pow(myN,2)-myN+ 2)*myK))))/4) \
+                          + (pow(myS0,2)*(pow(myN,2)-3-(pow(myN-1,2)*myK)))) /\
+                          ((myN*(myN-2)*(myN-3))*pow(myS0,2))
+      if myVarianceGCRV>0:
+        myZGCRV = -1*(myGearyC - 1) / pow(myVarianceGCRV,0.5)
+        myPGCRV = 2*(1-zprob(myZGCRV))
+
+    return [myMoranI,
+            myVarianceMIAN,myZMIAN,myPMIAN,
+            myVarianceMIRV,myZMIRV,myPMIRV,
+            myGearyC,
+            myVarianceGCAN,myZGCAN,myPGCAN,
+            myVarianceGCRV,myZGCRV,myPGCRV]
 
   ################################################################
   def runAnalysis(self):
 
-    if self.debug:
-      # set up a log file
-      self.debug.write("RasterAutoCorrelation: run called!\n")
-      self.debug.flush()
-    
     # find which raster layers are selected
     self.rasterLayerSelected=self.rasterLayerSelect.getSelected()
 
@@ -244,31 +314,46 @@ class RasterAutoCorrelation(QDialog, Ui_RasterAutoCorrelation):
 
       # add more rows to the output table if required
       if i>0:
-        self.outTable.setRowCount(i+1)
-        for j in range(4):
-          self.outTable.setItem(i,j,QTableWidgetItem())
+        self.outTable.setColumnCount(i+1)
+        for j in range(16):
+          self.outTable.setItem(j,i,QTableWidgetItem())
 
       # enter the name of the present layer into the output table
-      self.outTable.item(i,0).setText(myInf.name())
+      self.outTable.item(0,i).setText(myInf.name())
       self.repaint()
 
       # fetch the mean and display it
       myMean = self.getMean(myInf, myInfBand)
-      self.outTable.item(i,1).setText(QString(u'%f' %myMean))
+      self.outTable.item(1,i).setText(QString(u'%f' %myMean))
       self.repaint()
 
       # calculate moran and geary
-      [myMoran,myGeary] = self.getMoranGeary(myInf, myInfBand, myMean)
+      [myMoran,myVarianceMIAN,myZMIAN,myPMIAN,myVarianceMIRV,myZMIRV,myPMIRV,
+       myGeary,myVarianceGCAN,myZGCAN,myPGCAN,myVarianceGCRV,myZGCRV,myPGCRV
+       ] = self.getMoranGeary(myInf, myInfBand, myMean)
 
       # display the results
       if myMoran:
-        self.outTable.item(i,2).setText(QString(u'%f' %myMoran))
+        self.outTable.item(2,i).setText(QString(u'%f' %myMoran))
+        self.outTable.item(3,i).setText(QString(u'%f' %myVarianceMIAN))
+        self.outTable.item(4,i).setText(QString(u'%f' %myZMIAN))
+        self.outTable.item(5,i).setText(QString(u'%f' %myPMIAN))
+        self.outTable.item(6,i).setText(QString(u'%f' %myVarianceMIRV))
+        self.outTable.item(7,i).setText(QString(u'%f' %myZMIRV))
+        self.outTable.item(8,i).setText(QString(u'%f' %myPMIRV))
       else:
-        self.outTable.item(i,2).setText(QString(u'N/A'))
+        self.outTable.item(2,i).setText(QString(u'N/A'))
+
       if myGeary:
-        self.outTable.item(i,3).setText(QString(u'%f' %myGeary))
+        self.outTable.item(9,i).setText(QString(u'%f' %myGeary))
+        self.outTable.item(10,i).setText(QString(u'%f' %myVarianceGCAN))
+        self.outTable.item(11,i).setText(QString(u'%f' %myZGCAN))
+        self.outTable.item(12,i).setText(QString(u'%f' %myPGCAN))
+        self.outTable.item(13,i).setText(QString(u'%f' %myVarianceGCRV))
+        self.outTable.item(14,i).setText(QString(u'%f' %myZGCRV))
+        self.outTable.item(15,i).setText(QString(u'%f' %myPGCRV))
       else:
-        self.outTable.item(i,3).setText(QString(u'N/A'))
+        self.outTable.item(9,i).setText(QString(u'N/A'))
 
       self.repaint()
 

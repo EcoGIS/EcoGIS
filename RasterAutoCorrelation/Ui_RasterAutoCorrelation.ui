@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>386</width>
-    <height>336</height>
+    <height>651</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -120,12 +120,12 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>20</x>
      <y>10</y>
-     <width>161</width>
+     <width>171</width>
      <height>20</height>
     </rect>
    </property>
    <property name="text">
-    <string>Select raster layer for analysis</string>
+    <string>Select raster layer(s) for analysis</string>
    </property>
   </widget>
   <widget class="QTableWidget" name="outTable">
@@ -134,7 +134,7 @@ p, li { white-space: pre-wrap; }
      <x>20</x>
      <y>200</y>
      <width>341</width>
-     <height>101</height>
+     <height>441</height>
     </rect>
    </property>
    <property name="sizePolicy">
@@ -145,8 +145,8 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="minimumSize">
     <size>
-     <width>4</width>
-     <height>1</height>
+     <width>1</width>
+     <height>16</height>
     </size>
    </property>
    <property name="whatsThis">
@@ -165,10 +165,10 @@ p, li { white-space: pre-wrap; }
     <enum>QAbstractItemView::SelectItems</enum>
    </property>
    <property name="rowCount">
-    <number>1</number>
+    <number>16</number>
    </property>
    <property name="columnCount">
-    <number>4</number>
+    <number>1</number>
    </property>
    <attribute name="horizontalHeaderDefaultSectionSize">
     <number>75</number>
@@ -180,9 +180,21 @@ p, li { white-space: pre-wrap; }
     <number>25</number>
    </attribute>
    <row/>
-   <column/>
-   <column/>
-   <column/>
+   <row/>
+   <row/>
+   <row/>
+   <row/>
+   <row/>
+   <row/>
+   <row/>
+   <row/>
+   <row/>
+   <row/>
+   <row/>
+   <row/>
+   <row/>
+   <row/>
+   <row/>
    <column/>
   </widget>
  </widget>
