@@ -2,11 +2,7 @@
 /***************************************************************************
 RasterAutoCorrelation
 A QGIS plugin
-Calculate Moran's I and Geary's C on a raster file following the procedure
-described at by de Smith, Goodchild, Longley Geospatial Analysis - 
-a comprehensive guide. 3rd edition (c) 2006-2011 
-(http://www.spatialanalysisonline.com/ga_book.html)
-with additional details from (http://www.lpc.uottawa.ca/publications/moransi/moran.htm).
+Calculate Moran's I and Geary's C on a raster file.
 These formulas examine the 4 immediately adjacent pixels of each cell to 
 assess global spatial autocorrelation of the layer.
                              -------------------
@@ -61,6 +57,9 @@ class RasterAutoCorrelation(QDialog, Ui_RasterAutoCorrelation):
     self.outTable.setColumnCount(1)
     self.outTable.setRowCount(16)
 
+    # set up about box 
+    QObject.connect(self.aboutButton, SIGNAL("clicked()"), self.about)
+
     # fill in header for the table
     for i, label in enumerate(["Layer", "Mean", "Moran's I", 
                                "Variance (N)", "Z-score (N)", "p (N)", 
@@ -82,6 +81,47 @@ class RasterAutoCorrelation(QDialog, Ui_RasterAutoCorrelation):
     if self.rasterLayerSelect.checkSelected():
       # all tests passed! Let's go on
       self.runAnalysis()
+
+  ################################################################
+  # Show information when the info button is pressed
+  # based on about box of csw client by Alexander Bruy & Maxim Dubinin
+  def about( self ):
+    dlgAbout = QDialog()
+    dlgTitle="Raster Autocorrelation"
+    dlgAbout.setWindowTitle( QApplication.translate(dlgTitle, "Raster Autocorrelation", "Window title" ) )
+    lines = QVBoxLayout( dlgAbout )
+    title = QLabel( QApplication.translate( dlgTitle, "<b>Raster Autocorrelation</b>" ) )
+    title.setAlignment( Qt.AlignHCenter | Qt.AlignVCenter )
+    lines.addWidget( title )
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "Calculate Moran's I and Geary's C on a raster grid. Calculations are based on an \nexamination of the immediate neighbourhood of adjacent cells (i.e. the 4 pixels \nthat share a border with each cell). Two measures of variation are calculated, \none under an assumptions of Normality and the other under randomisation.  These \nvariations are used to calculate z-scores and in turn p-values are calculated for \nthese zscores to assess significance. Moran's I typically ranges from -1 (high \ndispersion) up to 1 (high autocorrelation).  A Geary's C value of 0 indicates \nhigh autocorrelation, whilst a value of 1 shows no autocorrelation.")))
+
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "<b>Output:</b>" ) ) )
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "Layer: Name of raster layer")))
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "Mean: Global mean of raster layer")))
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "Moran's I: Moran's I statistic for given layer")))
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "Geary's C: Geary's C statistic for given layer")))
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "Variation: Variation of statistic under (N) normality (R) randomisation assumption")))
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "Z-score: Conversion of statistic to z-score under (Normal) or (Randomisation) assumption")))
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "p: p-value of zscore under (N)/(P) assumptions")))
+
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "Based on Sawada, M. 1999. ROOKCASE: An Excel 97/2000 Visual Basic (VB) \n             Add-in for Exploring Global and Local Spatial Autocorrelation. \n             Bulletin of the Ecological Society of America, 80(4):231-234.")))
+                             
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "Validation against the examples given at:")))
+    link1=QLabel( QApplication.translate( dlgTitle, "<a href='http://www.lpc.uottawa.ca/publications/moransi/moran.htm'>http://www.lpc.uottawa.ca/publications/moransi/moran.htm</a>"))
+    link2=QLabel( QApplication.translate( dlgTitle, "<a href='http://www.spatialanalysisonline.com/output/html/Significancetestsforautocorrelationindices.html'>http://www.spatialanalysisonline.com/output/html/Significancetestsforautocorrelationindices.html</a>"))
+    link1.setOpenExternalLinks(True)
+    link2.setOpenExternalLinks(True)
+    lines.addWidget(link1)
+    lines.addWidget(link2)
+    
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "<b>Developer:</b>" ) ) )
+    lines.addWidget( QLabel( "  Chris Yesson" ) )
+
+    btnClose = QPushButton( QApplication.translate( dlgTitle, "Close" ) )
+    lines.addWidget( btnClose )
+    QObject.connect( btnClose, SIGNAL( "clicked()" ), dlgAbout, SLOT( "close()" ) )
+
+    dlgAbout.exec_()
 
   ################################################################
   # analysis bit starts here

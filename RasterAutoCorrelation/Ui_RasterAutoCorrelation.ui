@@ -17,9 +17,9 @@
    <property name="geometry">
     <rect>
      <x>190</x>
-     <y>150</y>
+     <y>130</y>
      <width>171</width>
-     <height>32</height>
+     <height>51</height>
     </rect>
    </property>
    <property name="orientation">
@@ -196,6 +196,19 @@ p, li { white-space: pre-wrap; }
    <row/>
    <row/>
    <column/>
+  </widget>
+  <widget class="QToolButton" name="aboutButton">
+   <property name="geometry">
+    <rect>
+     <x>250</x>
+     <y>170</y>
+     <width>71</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>About</string>
+   </property>
   </widget>
  </widget>
  <resources/>
