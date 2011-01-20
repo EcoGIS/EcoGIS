@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="/plugins/ecogis/pseudogrid" >
+     <file>icon.png</file>
+  </qresource>
+</RCC>
