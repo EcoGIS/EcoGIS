@@ -50,8 +50,11 @@ class PseudoDist(QDialog, Ui_PseudoDist):
     self.repaint()
 
     # set up shape output file handling
-    self.shapeOutput=shapeOutputSelect(self, self.outButton, self.outShape)
+    self.shapeOutput=gisOutputSelect(self, self.outButton, self.outShape, "Shapefile", "shp")
     #QObject.connect(self.outButton, SIGNAL("clicked()"), self.outFile)
+
+    # set up about box 
+    QObject.connect(self.aboutButton, SIGNAL("clicked()"), self.about)
 
     # get qgis map canvas
     self.iface=iface
@@ -65,11 +68,46 @@ class PseudoDist(QDialog, Ui_PseudoDist):
   # Called when "OK" button pressed (based on the Carson Farmer's PointsInPoly Plugin, 2008)
   def accept(self): 
     if self.rasterLayerSelect.checkSelected() and \
-          self.shapeOutput.checkOutShape():
+          self.shapeOutput.checkOutFile():
       # all tests passed! Let's go on
       self.statusLabel.setText("Processing...")
       self.repaint()
       self.runAnalysis()
+
+  ################################################################
+  # Show information when the info button is pressed
+  # based on about box of csw client by Alexander Bruy & Maxim Dubinin
+  def about( self ):
+    dlgAbout = QDialog()
+    dlgTitle="PseudoDist"
+    dlgAbout.setWindowTitle( QApplication.translate(dlgTitle, "PseudoDist Info", "Window title" ) )
+    lines = QVBoxLayout( dlgAbout )
+    title = QLabel( QApplication.translate( dlgTitle, "<b>PseudoDist - Generate distribution data following a model </b>" ) )
+    title.setAlignment( Qt.AlignHCenter | Qt.AlignVCenter )
+    lines.addWidget( title )
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "Given a background raster grid, generate a set of 'pseudo-distribution' points \nfollowing a model.  Starts by generating a random 'point of origin'.  Subsequent \npoints are selected either randomly or following a distance based model. Distance \nmodels can be based on geographic or environmental distance. One of three curve \nshapes can be applied to distance models, to define how the probability of selection \n deteriorates with distance.\n i) Gaussian model assumes a 'normal'-shaped curve \n ii) Linear curves assume linear degredation with distance up to the 'range'limit. \n iii) Threshhold assumes probability p=1 within the threshold distance, p=0 otherwise.\n  Using this tool it is possible to generate data following the CSR and SIM methods of \nBahn and McGill (2007) and the threshold response model of Meynard and Quinn (2007).")))
+
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "<b>Output:</b>" ) ) )
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "A shape file containing the generated points.  The attribute table contains these fields: ")))
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "Replicate: Number indicating the replicate.")))
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "ID: Point number within replicate (point 1 = point of origin).")))
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "X: X coordinate of point")))
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "Y: Y coordinate of point")))
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "Value: Value of raster layer at this point")))
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "P: Probability of selection for this point")))
+
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "<b>References:</b>" ) ) )
+
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "Bahn, V., McGill, B. J., 2007. Can niche-based distribution models out-perform\n      spatial interpolation? Global Ecol. Biogeogr. 16 (6), 733-742.\nMeynard, C. N., Quinn, J. F., 2007. Predicting species distributions: a critical\n      comparison of the most common statistical models using artificial species.\n      J. Biogeogr. 34 (8), 1455-1469.")))
+    
+    lines.addWidget( QLabel( QApplication.translate( dlgTitle, "<b>Developer:</b>" ) ) )
+    lines.addWidget( QLabel( "  Chris Yesson" ) )
+
+    btnClose = QPushButton( QApplication.translate( dlgTitle, "Close" ) )
+    lines.addWidget( btnClose )
+    QObject.connect( btnClose, SIGNAL( "clicked()" ), dlgAbout, SLOT( "close()" ) )
+
+    dlgAbout.exec_()
 
   ################################################################
   # analysis bit starts here

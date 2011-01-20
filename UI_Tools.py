@@ -8,33 +8,35 @@ from qgis.core import *
 ## the browse button (QToolbutton) for the output file
 ## and the box with the output file name (QLineEdit)
 ## Author: Chris Yesson
-class shapeOutputSelect:
+class gisOutputSelect:
 
-  def __init__(self, Dialog, outButton, outShape):
+  def __init__(self, Dialog, outButton, outFileBox, outType, outExt):
     self.Dialog=Dialog
     self.outButton=outButton
-    self.outShape=outShape
+    self.outFileBox=outFileBox
+    self.outType=str(outType)
+    self.outExt=str(outExt)
     QObject.connect(self.outButton, SIGNAL("clicked()"), self.outFile)
 
   ################################################################
-  def outFile(self): # by Carson Farmer 2008
+  def outFile(self): # based on code by Carson Farmer 2008
     # display file dialog for output shapefile
-    self.outShape.clear()
+    self.outFileBox.clear()
     fileDialog = QFileDialog()
     fileDialog.setConfirmOverwrite(False)
-    outName = fileDialog.getSaveFileName(self.Dialog, "Output Shapefile",".", "Shapefiles (*.shp)")
+    outName = fileDialog.getSaveFileName(self.Dialog, "Output %s" %self.outType,".", "%s (*.%s)" %(self.outType, self.outExt))
     outPath = QFileInfo(outName).absoluteFilePath()
-    if outPath.right(4) != ".shp":
-      outPath = outPath + ".shp"
+    if outPath.right(4) != ".%s" %self.outExt:
+      outPath = outPath + ".%s" %self.outExt
       if not outName.isEmpty():
-        self.outShape.clear()
-    self.outShape.insert(outPath)
+        self.outFileBox.clear()
+    self.outFileBox.insert(outPath)
 
   ################################################################
-  def checkOutShape(self):
+  def checkOutFile(self):
     myReturn=True
-    if self.outShape.text() == "":
-      QMessageBox.information(self, "PseudoDist", "Please specify an output shapefile")
+    if self.outFileBox.text() == "":
+      QMessageBox.information(self.Dialog, "", "Please specify an output %s" %self.outType)
       myReturn=False
 
     return myReturn

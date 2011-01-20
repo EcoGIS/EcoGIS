@@ -17,7 +17,7 @@
    <property name="geometry">
     <rect>
      <x>200</x>
-     <y>420</y>
+     <y>410</y>
      <width>171</width>
      <height>32</height>
     </rect>
@@ -133,6 +133,9 @@
      <height>41</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>Select points based on i) complete random selection. ii) distance from a point of origin.  iii) environmental distance from the point of origin</string>
+   </property>
    <property name="title">
     <string>Point selection method</string>
    </property>
@@ -140,13 +143,14 @@
     <property name="geometry">
      <rect>
       <x>120</x>
-      <y>20</y>
+      <y>9</y>
       <width>82</width>
-      <height>20</height>
+      <height>31</height>
      </rect>
     </property>
     <property name="text">
-     <string>Distance</string>
+     <string>Geographic 
+Distance</string>
     </property>
     <attribute name="buttonGroup">
      <string>methodButtons</string>
@@ -156,13 +160,14 @@
     <property name="geometry">
      <rect>
       <x>220</x>
-      <y>20</y>
-      <width>82</width>
-      <height>20</height>
+      <y>9</y>
+      <width>91</width>
+      <height>31</height>
      </rect>
     </property>
     <property name="text">
-     <string>Responsive</string>
+     <string>Environmental
+Distance</string>
     </property>
     <attribute name="buttonGroup">
      <string>methodButtons</string>
@@ -172,9 +177,9 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>20</y>
+      <y>9</y>
       <width>82</width>
-      <height>20</height>
+      <height>31</height>
      </rect>
     </property>
     <property name="text">
@@ -196,6 +201,9 @@
      <width>61</width>
      <height>22</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>Number of points to generate per replicate</string>
    </property>
    <property name="minimum">
     <number>1</number>
@@ -228,6 +236,9 @@
      <width>51</width>
      <height>22</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>Number of replicate data-sets to generate</string>
    </property>
    <property name="minimum">
     <number>1</number>
@@ -277,8 +288,11 @@
      <height>41</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>Distance based response curve describes how probability of selection declines with distance from the point of origin</string>
+   </property>
    <property name="title">
-    <string>Distance/Response curve </string>
+    <string>Shape of distance curve</string>
    </property>
    <widget class="QRadioButton" name="linearButton">
     <property name="geometry">
@@ -375,6 +389,9 @@ p, li { white-space: pre-wrap; }
      <height>22</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>Distance at which the probability of selection should become zero (or &lt;0.05) for gaussian curve</string>
+   </property>
    <property name="maximum">
     <double>40000000.000000000000000</double>
    </property>
@@ -393,6 +410,19 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="text">
     <string>Select output shape file</string>
+   </property>
+  </widget>
+  <widget class="QToolButton" name="aboutButton">
+   <property name="geometry">
+    <rect>
+     <x>260</x>
+     <y>440</y>
+     <width>71</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>About</string>
    </property>
   </widget>
  </widget>
